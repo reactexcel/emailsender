@@ -1,32 +1,54 @@
-require('dotenv').config(); // Load environment variables from .env
-const { SMTPClient } = require('smtp-client');
+const fs = require('fs');
+const nodemailer = require('nodemailer');
+const path = require('path');
+
+// Path to the email signature image
+const emailSignaturePath = path.join(__dirname, 'signature.png'); // Ensure the image is placed in the same directory
 
 async function sendEmail({ from, to, subject, message }) {
-    const client = new SMTPClient({
-        host: process.env.SMTP_HOST, // Using SMTP host from .env
-        port: parseInt(process.env.SMTP_PORT), // Using SMTP port from .env
-        secure: true, // Port 465 requires SSL
+    let creds;
+    try {
+        creds = JSON.parse(fs.readFileSync('creds.json', 'utf-8'));
+    } catch (err) {
+        console.error('Error loading credentials:', err);
+        throw new Error('Failed to load SMTP credentials');
+    }
+
+    // Create a transporter object using the SMTP credentials
+    const transporter = nodemailer.createTransport({
+        host: creds.host,
+        port: creds.port,
+        secure: creds.secure, // true for 465, false for other ports
+        auth: {
+            user: creds.user, // SMTP user
+            pass: creds.pass, // SMTP password
+        },
     });
 
+    // Email options
+    const mailOptions = {
+        from: from,
+        to: to,
+        subject: subject,
+        html: `
+            <p>${message}</p>
+            <br>
+            <br>
+            <img src="cid:emailSignature" alt="Email Signature">
+        `,
+        attachments: [
+            {
+                filename: 'signature.png',
+                path: emailSignaturePath,
+                cid: 'emailSignature' // Same CID as in the HTML <img> tag
+            }
+        ]
+    };
+
+    // Send the email
     try {
-        // Connect to the SMTP server
-        await client.connect();
-
-        // Authenticate with the server
-        await client.greet({ hostname: 'localhost' });
-        await client.authPlain({
-            username: process.env.SMTP_USER, // Using SMTP username from .env
-            password: process.env.SMTP_PASS, // Using SMTP password from .env
-        });
-
-        // Sending email
-        await client.mail({ from });
-        await client.rcpt({ to });
-        await client.data(`Subject: ${subject}\n\n${message}`);
-
-        // Disconnect from the server
-        await client.quit();
-        console.log('Email sent successfully!');
+        let info = await transporter.sendMail(mailOptions);
+        console.log('Message sent: %s', info.messageId);
     } catch (err) {
         console.error('Error sending email:', err);
     }
