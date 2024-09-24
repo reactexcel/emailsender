@@ -1,0 +1,7 @@
+{
+    "host": "smtp.gmail.com",
+    "port": 465,
+    "user": "atul.etech2011@gmail.com",
+    "pass": "kmzzqumicelihwib",
+    "secure": false
+}

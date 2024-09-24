@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMTP Settings</title>
+    <link href="output.css" rel="stylesheet">
+    <style>
+        .notification {
+            display: none;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .notification.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .notification.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100">
+    <div class="container mx-auto p-8">
+        <div class="max-w-lg mx-auto bg-white shadow-lg rounded-lg p-8">
+            <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">SMTP Settings</h1>
+
+            <!-- Notification Area -->
+            <div id="notification" class="notification"></div>
+
+            <!-- Form -->
+            <form id="smtpSettingsForm" enctype="multipart/form-data" class="space-y-4">
+                <div>
+                    <label for="host" class="block text-gray-600">SMTP Host:</label>
+                    <input type="text" id="host" name="host"
+                        class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label for="port" class="block text-gray-600">SMTP Port:</label>
+                    <input type="number" id="port" name="port"
+                        class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label for="user" class="block text-gray-600">SMTP User:</label>
+                    <input type="text" id="user" name="user" autocomplete="off"
+                        class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label for="pass" class="block text-gray-600">SMTP Password:</label>
+                    <input type="password" id="pass" name="pass" autocomplete="off"
+                        class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label for="secure" class="block text-gray-600">Use SSL:</label>
+                    <input type="checkbox" id="secure" name="secure" class="w-full p-2">
+                </div>
+
+                <!-- File upload field for the signature.png -->
+                <div>
+                    <label for="signature" class="block text-gray-600">Signature (PNG only):</label>
+                    <input type="file" id="signature" name="signature" accept="image/png"
+                        class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+
+                <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition">
+                    Update Settings
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Function to show notification
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        async function loadSettings() {
+            const response = await fetch('/smtp-settings');
+            const settings = await response.json();
+
+            document.getElementById('host').value = settings.host || '';
+            document.getElementById('port').value = settings.port || '';
+            document.getElementById('user').value = settings.user || '';
+            document.getElementById('pass').value = settings.pass || '';
+            document.getElementById('secure').checked = settings.secure || false;
+        }
+
+        document.getElementById('smtpSettingsForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const formData = new FormData();
+            formData.append('host', document.getElementById('host').value);
+            formData.append('port', document.getElementById('port').value);
+            formData.append('user', document.getElementById('user').value);
+            formData.append('pass', document.getElementById('pass').value);
+            formData.append('secure', document.getElementById('secure').checked);
+
+            // Add signature file if one was selected
+            const signatureFile = document.getElementById('signature').files[0];
+            if (signatureFile) {
+                formData.append('signature', signatureFile);
+            }
+
+            const response = await fetch('/smtp-settings', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (response.ok) {
+                showNotification('Settings updated successfully', 'success');
+            } else {
+                showNotification('Failed to update settings', 'error');
+            }
+        });
+
+        loadSettings();
+    </script>
+</body>
+
+</html>
